@@ -1,33 +1,39 @@
 package com.carriokay.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.internet.MimeMessage;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.OutputStream;
 
 @Service
 public class EmailService {
 
-	@Autowired
-    private JavaMailSender mailSender;
-
     public void sendSimpleMail(String to, String subject, String text) {
+
         try {
-            System.out.println("Sending email to: " + to);
+            URL url = new URL("https://api.resend.com/emails");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Authorization", "Bearer " + System.getenv("RESEND_API_KEY"));
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
 
-            helper.setFrom("2400031412cse1@gmail.com"); 
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(text);
+            String body = "{"
+                    + "\"from\":\"onboarding@resend.dev\","
+                    + "\"to\":\"" + to + "\","
+                    + "\"subject\":\"" + subject + "\","
+                    + "\"html\":\"<p>" + text + "</p>\""
+                    + "}";
 
-            mailSender.send(message);
+            OutputStream os = conn.getOutputStream();
+            os.write(body.getBytes());
+            os.flush();
+            os.close();
 
-            System.out.println("Email sent successfully");
+            int responseCode = conn.getResponseCode();
+            System.out.println("Email response code: " + responseCode);
 
         } catch (Exception e) {
             e.printStackTrace();
